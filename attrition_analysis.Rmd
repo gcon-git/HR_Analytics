@@ -1,0 +1,2568 @@
+---
+title: "Kaggle Data - IBM HR Analytics"
+author: "G. Conway"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: column
+    vertical_layout: fill
+    theme: yeti
+    source_code: embed
+---
+
+```{r initial_packages, include = FALSE}
+library(tidyverse)
+library(DataExplorer)
+library(knitr)
+library(kableExtra)
+library(pander)
+```
+
+```{r read_load_data, include = FALSE}
+data <- read_csv("WA_Fn-UseC_-HR-Employee-Attrition.csv")
+```
+
+Welcome 
+=======================================================================
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### Why this project 
+
+* Get back into the books and notes to refresh on concepts and software
+
+* Refresh on and practice using R/RStudio
+
+* Experiment with flexdashboards to see if I might want/how to incorporate this as part a workflow process
+
+* Work with a relevant data set 
+
+* Learning new things about flexdashboards in R/Rmarkdown (Ex: using html for picture sizing & placement)  
+**Image Source:**  https://images.techhive.com/images/article/2016/09/data_science_classes-100682563-large.jpg
+
+<div>
+  <img style="position:absolute;width:575px;height:400px;"
+      src="data_science_pic.jpg">
+</div>
+
+
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Important Note(s)
+
+* This is best viewed on a wide-screen monitor.  
+
+* After opening this file, expand or maximize the window to properly view it. 
+
+* A small, or reduced, window size causes the top tabs to move to a second line in the header row. This collapses the page contents in a manner that hides various window/section headers, etc.
+
+### Experimental section
+
+This section demonstrates showing a code block without the result(s).
+
+```{r, echo = T, eval = F}
+a <- 2 + 2
+
+b <- function(x){
+  print(x^2)
+}
+
+b(a)
+
+rm(a, b) # clean memory
+```
+
+
+About The Data {data-navmenu="Data Exploration"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Data Source
+
+IBM HR Analytics Employee Attrition & Performance  
+Downloaded from:  https://www.kaggle.com/pavansubhasht/ibm-hr-analytics-attrition-dataset  
+
+* Data is fictional - created by IBM data scientists
+
+* Insight considerations (general):
+  + Predict attrition 
+  + What factors contribute to attrition
+  + Once identify factors contributing to attrition, deep-dive and/or comparisons to develop understanding of those factors
+
+```{r initial_data_clean}
+# make a copy of the data
+data_copy <- data
+
+# remove the original data to avoid accidentally altering it
+rm(data)
+
+# change all variable names to lower case
+colnames(data_copy) <- tolower(colnames(data_copy))
+
+# change all character values to lower case
+data_copy <- data_copy %>%
+  mutate_if(is.character, str_to_lower)
+
+# change attrition to binary variable
+data_copy$attrition <- ifelse(data_copy$attrition == "yes", 1, 0)
+
+# factor the remaining categorical variables
+data_copy$businesstravel <- factor(data_copy$businesstravel,
+                                   levels = c("non-travel", "travel_rarely",
+                                              "travel_frequently"))
+data_copy$department <- factor(data_copy$department)
+data_copy$educationfield <- factor(data_copy$educationfield)
+data_copy$gender <- factor(data_copy$gender)
+data_copy$jobrole <- factor(data_copy$jobrole)
+data_copy$maritalstatus <- factor(data_copy$maritalstatus,
+                                  levels = c("single", "married", "divorced"))
+data_copy$over18 <- factor(data_copy$over18)
+data_copy$overtime <- factor(data_copy$overtime)
+```
+
+### Data Sample (scrollable)
+
+```{r data_sample}
+head(data_copy, 5) %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+
+Column
+-----------------------------------------------------------------------
+
+### Data Overview
+
+```{r data_overview}
+
+tempdf <- t(as.data.frame(introduce(data_copy)))
+colnames(tempdf) <- "value"
+
+tempdf %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T, position = "left")
+
+rm(tempdf)
+```
+
+### Data Dictionary (scrollable)
+
+**_$attrition$_**  
+0 'No' 1 'Yes'
+
+**_$education$_**  
+1 'Below College' 2 'College' 3 'Bachelor' 4 'Master' 5 'Doctor'
+
+**_$environmentsatisfaction$_**  
+1 'Low' 2 'Medium' 3 'High' 4 'Very High'
+
+**_$jobinvolvement$_**  
+1 'Low' 2 'Medium' 3 'High' 4 'Very High'
+
+**_$joblevel$_**  
+Ordinal levels represented by 1, 2, 3, 4, 5. No further meaning known.
+
+**_$jobsatisfaction$_**  
+1 'Low' 2 'Medium' 3 'High' 4 'Very High'
+
+**_$performancerating$_**  
+1 'Low' 2 'Good' 3 'Excellent' 4 'Outstanding'
+
+**_$relationshipsatisfaction$_**  
+1 'Low' 2 'Medium' 3 'High' 4 'Very High'
+
+**_$stockoptionlevel$_**  
+Ordinal levels represented by 0, 1, 2, 3. No further meaning known.
+
+**_$worklifebalance$_**  
+1 'Bad' 2 'Good' 3 'Better' 4 'Best'
+
+<br>
+
+```{r data_dictionary}
+tempdf <- as.data.frame(cbind(unlist(sapply(data_copy, levels)))) 
+colnames(tempdf) <- "meaning"
+
+tempdf %>%
+  rownames_to_column("factor_level") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+rm(tempdf) # to clean memory
+``` 
+
+
+Missing Values {data-navmenu="Data Exploration"}
+=======================================================================
+
+**_Missing Values_**  
+
+```{r missing values, fig.height = 8.25, fig.width = 8}
+plot_missing(data_copy)
+```
+
+Feature Distributions {data-navmenu="Data Exploration"}
+=======================================================================
+
+Column{.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Continuous data distributions 
+```{r num_data_distro, fig.width = 8}
+plot_histogram(data_copy, nrow = 3, ncol = 3)
+```
+
+### Discrete data distributions
+```{r discrete_data_distro, fig.width = 8}
+plot_bar(data_copy, nrow = 3, ncol = 3)
+```
+
+
+Correlations {data-navmenu="Data Exploration"}
+=======================================================================
+
+Column{.tabset .tabset-fade}
+-----------------------------------------------------------------------
+### All-Data Correlations
+```{r all_correlations, fig.height = 8.25, fig.width = 8}
+plot_correlation(data_copy, "all") # first dummifies all categories & then
+                              # computes correlations for discrete features
+```
+
+### Continuous Data Correlations
+```{r num_correlations, fig.height = 8.25, fig.width = 8}
+plot_correlation(data_copy, "continuous")
+```
+
+### Discrete Data Correlations
+```{r discrete_correlations, fig.height = 8.25, fig.width = 8}
+plot_correlation(data_copy, "discrete") # first dummifies all categories & then
+                              # computes correlations
+```
+
+Initial Observations/Notes
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+**_Notes_**
+
+* Using a 70/30 train/test split for assessing model performance  
+
+* Models to explore:  Logistic regression (manual and step-wise), Sparse logistic regression
+  
+* Although, $joblevel$ and $stockoptionlevel$ show as numbers, they represent distinct, ordered levels. As such, we will leave the values as quantitative values but will view them from the perspective of ordinal variables during interpretations for this analysis. 
+
+* Refer to **_Data Exploration_** $\rightarrow$ **_About The Data_** $\rightarrow$ **_Data Dictionary_** section to see which variables were factored and their corresponding factor levels.
+
+* $maritalstatus$ was factored as an ordinal variable 
+
+<hr>
+
+**_Observations_**
+
+* The following variables/predictors are not needed for analysis:  
+    + $employeecount$ --> each observation represent a single employee  
+    + $over18$ --> all employees are over 18  
+    + $standardhours$ --> has only 1 unique value (80)  
+    + $employeenumber$ --> not needed; simply a means of referencing  
+
+* There are no missing values; therefore, no imputation or removal of instances is required  
+
+* Multicolinearity observed - high correlations involving the following continuous variables could affect model:
+    + $age$ $\rightarrow$ $joblevel$, $monthlyincome$, $totalworkingyears$ and $yearsatcompany$
+    + $joblevel$ $\rightarrow$ $monthlyincome$, $totalworkingyears$ and $yearsatcompany$
+    + $monthlyincome$ $\rightarrow$ $totalworkingyears$ and $yearsatcompany$
+    + $percentsalaryhike$ $\rightarrow$ $performancerating$
+    + $totalworkingyears$ $\rightarrow$ $yearsatcompany$
+    + $yearsatcompany$ $\rightarrow$ $yearsincurrentrole$, $yearssincelastpromotion$ and $yearswithcurrmanager$
+
+    
+* High correlations among categorical data levels will be ignored initially. I'm choosing to do this because:
+    + I am not expanding the data set to include dummy variables for each category level. Doing so will increase the dimensionality.
+    + The variable selection process may resolve the issue.
+    
+* The data is unbalanced on the response variable $attrition$
+```{r attrition_balance}
+kable(table(data_copy$attrition),
+             col.names = c("", "Freq")) %>%
+  kable_styling(full_width = F, position = "left")
+```
+
+* In his book _An Introduction to Categorical Data Analysis (2nd Ed.)_, Agresti discusses a guideline that suggests that there "...ideally be at least 10 outcomes of each type for every predictor." This guideline indicates that there should be **no more** than 23-24 predictors in our final logistic regression model.
+    
+```{r drop_unused_vars}
+# drop unused variables
+data_copy <- subset(data_copy, select = -c(employeecount,
+                                           over18,
+                                           standardhours,
+                                           employeenumber))
+```
+
+```{r create_train_test_sets}
+# set seed to recreate sampling in future code runs
+set.seed(259)
+
+# number of instances/observations that should be in each set
+num_train <- 0.7*nrow(data_copy)
+num_test <-  0.3*nrow(data_copy)
+
+# create indicators
+all_index <- sample(1:nrow(data_copy), size = nrow(data_copy), replace = F)
+
+train_index <- all_index[1:num_train]
+test_index <- which(!(c(1:nrow(data_copy)) %in% train_index))
+
+# create data sets
+train <- data_copy[train_index, ]
+test <- data_copy[test_index, ]
+
+# clean up memory
+rm(num_train, num_test, all_index, train_index, test_index)
+```
+
+Saturated (Full) Model {data-navmenu="Logistic Regression"} 
+=======================================================================
+**_Saturated (Full) Model_**  
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &\beta_0 + \beta_1age + \beta_2businesstravel + \\
+                    &\beta_3dailyrate + \beta_4department + 
+                    \beta_5distancefromhome + \beta_6education + \\
+                    &\beta_7educationfield + \beta_8environmentsatisfaction + 
+                    \beta_9gender + \beta_{10}hourlyrate + \\
+                    &\beta_{11}jobinvolvement + \beta_{12}joblevel + 
+                    \beta_{13}jobrole + \beta_{14}jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + \beta_{16}monthlyincome +
+                    \beta_{17}monthlyrate + \beta_{18}numcompaniesworked + \\
+                    &\beta_{19}overtime + \beta_{20}percentsalaryhike + 
+                    \beta_{21}performancerating + \\
+                    &\beta_{22}relationshipsatisfaction + 
+                    \beta_{23}stockoptionlevel + \\
+                    &\beta_{24}totalworkingyears + 
+                    \beta_{25}trainingtimeslastyear + \\
+                    &\beta_{26}worklifebalance + \beta_{27}yearsatcompany + 
+                    \beta_{28}yearsincurrentrole + \\
+                    &\beta_{29}yearssincelastpromotion + 
+                    \beta_{30}yearswithcurrmanager
+\end{align}  
+
+* **Note:  at this point we begin working with the training data.**
+
+* Before further refining the logistic regression model, let's look at the summary for the saturated model. Red indicates statistical significance ($p-value < 0.05$).
+
+```{r full_model}
+# get the full model and look at it
+mod_full <- glm(attrition ~ age + businesstravel + dailyrate + department +
+                    distancefromhome + education + educationfield +
+                    environmentsatisfaction + gender + hourlyrate +
+                    jobinvolvement + joblevel + jobrole +
+                    jobsatisfaction + maritalstatus + monthlyincome +
+                    monthlyrate + numcompaniesworked + overtime +
+                    percentsalaryhike + performancerating +
+                    relationshipsatisfaction + stockoptionlevel +
+                    totalworkingyears + trainingtimeslastyear +
+                    worklifebalance + yearsatcompany + yearsincurrentrole +
+                    yearssincelastpromotion + yearswithcurrmanager,
+                family = binomial(link = "logit"), data = train)
+
+
+as.data.frame(round(coef(summary(mod_full)), 5)) %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `Pr(>|z|)` = cell_spec(`Pr(>|z|)`, "html",
+                           color = ifelse(`Pr(>|z|)` < 0.05, "red", "black"))
+  ) %>% 
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+* We have a lot of coefficients that are not significant and we have not yet addressed the colinearity in the data.
+
+* To address the colinearity, we'll look at the variance inflation factors of the model. But first, let's check for independence between the categorical response vs. each categorical predictor. In those cases where we find that the response variable does not depend on/have a relationship with a predictor we will remove that predictor from the model.
+
+Check X vs. Y Independence {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Check X vs. Y Independence
+
+* Here, we'll check to see if there's a relationship between ($H_o: No\ relationship/independent)$) each categorical variable and the response variable using contingency tables, $\chi^2$, and $p-values$. Where contingency tables have an ordinal variable w/ attrition (nominal - 2 levels) we will use the Cochran-Mantel-Haenszel (CMH) test, a linear trend test, since it will have more power. **The results of the CMH test will be directly beneath the corresponding CrossTable and indicated by d.f. = 1.**  
+
+<br>  
+
+* **Use $\chi^2$ test for independence for the following predictors w/ attrition:**
+  + $businesstravel$
+  + $department$
+  + $educationfield$
+  + $gender$
+  + $jobrole$
+  + $maritalstatus$
+  + $overtime$ 
+
+<br>
+
+* **CMH test for the remaining categorical predictors vs. attrition**  
+
+<br>
+
+* The following predictors are independent of the response (i.e. $p-value > 0.05$). We will remove these predictors from the model since the response does not depend on these predictors.
+  + $gender$
+  + $relationshipsatisfaction$
+  + $worklifebalance$
+  
+Column
+-----------------------------------------------------------------------
+
+### $\chi^2$ tests (scrollable)
+
+```{r}
+# NOTE: the descr package can be used to generate CrossTables and get Chi-sq
+#   results which works well when using pander() to knit tables. 
+
+# attach the train data to be able to use the variables names in R functions
+attach(train)
+
+library(gmodels) # to use CrossTable()
+
+CrossTable(businesstravel, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+CrossTable(department, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+CrossTable(educationfield, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+CrossTable(gender, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+CrossTable(jobrole, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+CrossTable(maritalstatus, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+CrossTable(overtime, attrition, expected = T, prop.r = F, prop.c = F, 
+           prop.t = F, prop.chisq = F, chisq = T)
+```
+
+### CMH tests (scrollable)
+
+```{r}
+# CrossTable for education vs. attrition is only to check expected cell counts
+CrossTable(education, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for education vs. attrition
+tab <- table(education, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for environmentsatisfaction vs. attrition is only to check expected cell counts
+CrossTable(environmentsatisfaction, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for environmentsatisfaction vs. attrition
+tab <- table(environmentsatisfaction, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for jobinvolvement vs. attrition is only to check expected cell counts
+CrossTable(jobinvolvement, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for jobinvolvement vs. attrition
+tab <- table(jobinvolvement, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for joblevel vs. attrition is only to check expected cell counts
+CrossTable(joblevel, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for joblevel vs. attrition
+tab <- table(joblevel, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for jobsatisfaction vs. attrition is only to check expected cell counts
+CrossTable(jobsatisfaction, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for jobsatisfaction vs. attrition
+tab <- table(jobsatisfaction, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for relationshipsatisfaction vs. attrition is only to check expected cell counts
+CrossTable(relationshipsatisfaction, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for relationshipsatisfaction vs. attrition
+tab <- table(relationshipsatisfaction, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for stockoptionlevel vs. attrition is only to check expected cell counts
+CrossTable(stockoptionlevel, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for stockoptionlevel vs. attrition
+tab <- table(stockoptionlevel, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+<br>
+<hr>
+<br>
+
+```{r}
+# CrossTable for worklifebalance vs. attrition is only to check expected cell counts
+CrossTable(worklifebalance, attrition, digits = 0, expected = T, prop.r = F, prop.c = F, prop.t = F, prop.chisq = F)
+# use CMH test for worklifebalance vs. attrition
+tab <- table(worklifebalance, attrition)
+vcdExtra::CMHtest(tab)$table[1, ]
+```
+
+```{r}
+# clean memory
+rm(tab)
+```
+
+Check VIFs {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+**_Model m2 showing the removal of the three predictors from the previous section_** 
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &\beta_0 + \beta_1age + \beta_2businesstravel + \\
+                    &\beta_3dailyrate + \beta_4department + 
+                    \beta_5distancefromhome + \beta_6education + \\
+                    &\beta_7educationfield + \beta_8environmentsatisfaction + 
+                    \beta_{10}hourlyrate + \\
+                    &\beta_{11}jobinvolvement + \beta_{12}joblevel + 
+                    \beta_{13}jobrole + \beta_{14}jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + \beta_{16}monthlyincome +
+                    \beta_{17}monthlyrate + \beta_{18}numcompaniesworked + \\
+                    &\beta_{19}overtime + \beta_{20}percentsalaryhike + 
+                    \beta_{21}performancerating + \\
+                    &\beta_{23}stockoptionlevel + \beta_{24}totalworkingyears + 
+                    \beta_{25}trainingtimeslastyear + \\
+                    &\beta_{27}yearsatcompany + \beta_{28}yearsincurrentrole + \\
+                    &\beta_{29}yearssincelastpromotion + 
+                    \beta_{30}yearswithcurrmanager
+\end{align}  
+
+* Check the variance inflation factors of the reduced model (m2) to identify additional potential variables to remove
+
+```{r model_m2}
+# clean memory
+rm(mod_full)
+
+m2 <- glm(attrition ~ age + businesstravel + dailyrate + department +
+                    distancefromhome + education + educationfield +
+                    environmentsatisfaction + hourlyrate +
+                    jobinvolvement + joblevel + jobrole +
+                    jobsatisfaction + maritalstatus + monthlyincome +
+                    monthlyrate + numcompaniesworked + overtime +
+                    percentsalaryhike + performancerating +
+                    stockoptionlevel +
+                    totalworkingyears + trainingtimeslastyear +
+                    yearsatcompany + yearsincurrentrole +
+                    yearssincelastpromotion + yearswithcurrmanager,
+                family = binomial(link = "logit"), data = train)
+```
+
+
+```{r vif_full}
+# look at the variance inflation factors to check multicolinearity
+library(car)
+vif_result_m2 <- as.data.frame(vif(m2))
+kable(vif_result_m2) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+* The VIF table generated doesn't give clear direction. Instead, take the square of column 3 of vif_result_m2 & apply standard VIF rules of thumb. NOTE: see https://stats.stackexchange.com/questions/70679/which-variance-inflation-factor-should-i-be-using-textgvif-or-textgvif for discussion on use of GVIF.
+
+```{r gvif_use, fig.width=8}
+vif_result_m2$GVIF_SQ_measure <- vif_result_m2$`GVIF^(1/(2*Df))`^2
+
+# view VIF-related results in a plot
+vif_result_m2$variable <- rownames(vif_result_m2)
+
+ggplot(data = vif_result_m2, aes(x = variable, y = GVIF_SQ_measure)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 90, vjust = -0.005, hjust = 0))
+
+# this zooms in on the plot
+ggplot(data = vif_result_m2, aes(x = variable, y = GVIF_SQ_measure)) + geom_bar(stat = "identity") + ylim(0, 20) + theme(axis.text.x = element_text(angle = 90, vjust = -0.005, hjust = 0))
+
+rm(vif_result_m2)
+```
+
+* Remove the following variables with a GVIF_SQ_measure > 5. The predictors identified as having a high VIF measure correspond with correlations noted in the heatmaps generated in the **_Data Exploration_** $\rightarrow$ **_Correlations_** section.
+  + $department$
+  + $joblevel$
+  + $jobrole$
+  + $monthlyincome$
+  + $yearsatcompany$
+  
+Reduced Model (m2) {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Reduced model m2
+
+* Now that we've identified an initial set of variables to remove, we arrive at a reduced model (m2) in the form of:
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &\beta_0 + \beta_1age + \beta_2businesstravel + \\
+                    &\beta_3dailyrate + 
+                    \beta_5distancefromhome + \beta_6education + \\
+                    &\beta_7educationfield + \beta_8environmentsatisfaction + 
+                    \beta_{10}hourlyrate + \\
+                    &\beta_{11}jobinvolvement + \beta_{14}jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + \beta_{17}monthlyrate + \beta_{18}numcompaniesworked + \\
+                    &\beta_{19}overtime + \beta_{20}percentsalaryhike + 
+                    \beta_{21}performancerating + \\
+                    &\beta_{23}stockoptionlevel + \beta_{24}totalworkingyears + 
+                    \beta_{25}trainingtimeslastyear + \\
+                    &\beta_{28}yearsincurrentrole + \\
+                    &\beta_{29}yearssincelastpromotion + 
+                    \beta_{30}yearswithcurrmanager
+\end{align}  
+
+```{r reduced_m2}
+m2 <- glm(attrition ~ age + businesstravel + dailyrate + 
+                    distancefromhome + education + educationfield +
+                    environmentsatisfaction + hourlyrate +
+                    jobinvolvement + 
+                    jobsatisfaction + maritalstatus + 
+                    monthlyrate + numcompaniesworked + overtime +
+                    percentsalaryhike + performancerating +
+                    stockoptionlevel +
+                    totalworkingyears + trainingtimeslastyear +
+                    yearsincurrentrole +
+                    yearssincelastpromotion + yearswithcurrmanager,
+                family = binomial(link = "logit"), data = train)
+```
+
+* Does the model (m2) fit?
+
+```{r M2_fit_summary}
+as.data.frame(round(coef(summary(m2)), 5)) %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `Pr(>|z|)` = cell_spec(`Pr(>|z|)`, "html",
+                           color = ifelse(`Pr(>|z|)` < 0.05, "red", "black"))
+  ) %>% 
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+data.frame("Residual Deviance" = m2$deviance, 
+           "Residual df" = m2$df.residual) %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(full_width = F)
+```
+
+* We see that model M2 fits by $\frac{deviance_{res}}{df_{res}} \leq 1$. Check the marginal model plots to check model validity and to see if any of the continuous predictors are misspecified. If a predictor is misspecified, check the conditional density plots to see what kind of transformation may be needed.
+
+
+Column
+-----------------------------------------------------------------------
+
+### Marginal Model Plots (scrollable)
+
+* Check the marginal model plots (mmp) of the quantitative predictors to see if the model is specified correctly
+
+```{r mmp_m2}
+# load the car library to use the mmp() function
+library(car)
+
+attach(train)
+
+# check the marginal model plots of the quantitative variables for model validity
+#   and indicators that particular variables need to be transformed
+mmp(m2, m2$linear.predictors)
+mmp(m2, age)
+mmp(m2, dailyrate)
+mmp(m2, distancefromhome)
+mmp(m2, hourlyrate)
+mmp(m2, monthlyrate)
+mmp(m2, numcompaniesworked)
+mmp(m2, percentsalaryhike)
+mmp(m2, trainingtimeslastyear)
+mmp(m2, yearsincurrentrole)
+mmp(m2, yearssincelastpromotion)
+mmp(m2, yearswithcurrmanager)
+```
+
+### Conditional Density Plots (scrollable)
+
+* $age$ appears to be misspecified. 
+
+```{r conditional_dens_plots_m2}
+boxplot(age ~ attrition, ylab = "age", xlab = "attrition")
+plot(density(age[attrition == 0], bw = "SJ", kern = "gaussian"), type = "l", xlab = "age", main = "")
+rug(age[attrition == "no"])
+lines(density(age[attrition == 1], bw = "SJ", kern = "gaussian"), type = "l", xlab = "age", main = "")
+rug(age[attrition == "yes"])
+```
+
+* $age$ appears to generally have a normal distribution and the same/similar variance for both values of $attrition$ (i.e., yes and no). Let's try adding a quadratic term to the model for $age$.
+
+
+Reduced Model (m3) {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Model m3
+
+* Here we will include a quadratic term in the model for $age$ and arrive at model (m3) in the form of:
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &\beta_0 + \beta_1age + \beta_{1a}age^2 + \beta_2businesstravel + \\
+                    &\beta_3dailyrate + 
+                    \beta_5distancefromhome + \beta_6education + \\
+                    &\beta_7educationfield + \beta_8environmentsatisfaction + 
+                    \beta_{10}hourlyrate + \\
+                    &\beta_{11}jobinvolvement + \beta_{14}jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + \beta_{17}monthlyrate + \beta_{18}numcompaniesworked + \\
+                    &\beta_{19}overtime + \beta_{20}percentsalaryhike + 
+                    \beta_{21}performancerating + \\
+                    &\beta_{23}stockoptionlevel + \beta_{24}totalworkingyears + 
+                    \beta_{25}trainingtimeslastyear + \\
+                    &\beta_{28}yearsincurrentrole + \\
+                    &\beta_{29}yearssincelastpromotion + 
+                    \beta_{30}yearswithcurrmanager
+\end{align}      
+
+```{r model_m3}
+# clean memory
+rm(m2)
+
+m3 <- glm(attrition ~ age + I(age^2) + businesstravel + dailyrate + 
+                    distancefromhome + education + educationfield +
+                    environmentsatisfaction + hourlyrate +
+                    jobinvolvement + 
+                    jobsatisfaction + maritalstatus + 
+                    monthlyrate + numcompaniesworked + overtime +
+                    percentsalaryhike + performancerating +
+                    stockoptionlevel +
+                    totalworkingyears + trainingtimeslastyear +
+                    yearsincurrentrole +
+                    yearssincelastpromotion + yearswithcurrmanager,
+                family = binomial(link = "logit"), data = train)
+```
+
+* Does the model (m3) fit?
+
+```{r m3_fit_summary}
+as.data.frame(round(coef(summary(m3)), 5)) %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `Pr(>|z|)` = cell_spec(`Pr(>|z|)`, "html",
+                           color = ifelse(`Pr(>|z|)` < 0.05, "red", "black"))
+  ) %>% 
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+data.frame("Residual Deviance" = m3$deviance, 
+           "Residual df" = m3$df.residual) %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(full_width = F)
+```
+
+* We see that model m3 fits by $\frac{deviance_{res}}{df_{res}} \leq 1$. Check the marginal model plots.
+
+Column
+-----------------------------------------------------------------------
+
+### Marginal Model Plots (scrollable)
+
+* Check the marginal model plots (mmp) of the quantitative predictors to see if the model is specified correctly
+
+```{r mmp_m3}
+mmp(m3, m3$linear.predictors)
+mmp(m3, age)
+mmp(m3, dailyrate)
+mmp(m3, distancefromhome)
+mmp(m3, hourlyrate)
+mmp(m3, monthlyrate)
+mmp(m3, numcompaniesworked)
+mmp(m3, percentsalaryhike)
+mmp(m3, trainingtimeslastyear)
+mmp(m3, yearsincurrentrole)
+mmp(m3, yearssincelastpromotion)
+mmp(m3, yearswithcurrmanager)
+```
+
+### Observations on model m3
+
+* Adding the $age^2$ term corrects some misspecification in the model.
+
+* Look at the standardized deviance residuals and inspect for outliers and bad leverage points
+
+Leverage (Model m3) {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+Column 
+-----------------------------------------------------------------------
+
+### Leverage Plot
+
+```{r leverage_m3}
+hvalues <- influence(m3)$hat
+stanresDeviance <- residuals(m3) / sqrt(1-hvalues)
+levcutoff <- 2 * mean(hvalues)
+highlevs <- which(hvalues > levcutoff)
+```
+
+```{r leverage_plot}
+qplot(hvalues, stanresDeviance) +
+  xlab("Leverage Values") +
+  ylab("Standardized Deviance Residuals") +
+  geom_vline(xintercept = levcutoff, color = "steel blue") +
+  geom_point(aes(hvalues[highlevs], stanresDeviance[highlevs], color = "high leverage")) +
+  geom_point(aes(hvalues[stanresDeviance > 2], 
+                stanresDeviance[stanresDeviance > 2], color = "outlier (SDR > 2)")) +
+  labs(color = "")
+```
+
+### Observations
+
+* There doesn't appear to be any bad leverage points, although there are several points of high leverage.
+
+* There does appear to be outliers in the data.
+
+* Since this is a simulated dataset, we will assume that there is sufficient reason for removing the outliers.
+
+Column 
+-----------------------------------------------------------------------
+
+### Number of outliers
+
+```{r num_outliers, comment=NA}
+outliers <- c(which(stanresDeviance > 2), which(stanresDeviance < -2))
+names(outliers) <- NULL
+
+pander(length(outliers))
+```
+
+### Outlier indices
+
+```{r outlier_indices, comment=NA}
+pander(outliers)
+```
+
+### Outlier data (scrollable)
+
+```{r outlier_data}
+train[outliers, ] %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(full_width = F, bootstrap_options = "striped")
+```
+
+```{r}
+# clean memory
+rm(hvalues, levcutoff, stanresDeviance)
+```
+
+Outliers Removed (Model m3) {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+```{r remove outliers}
+train_minus_outliers <- train[-outliers, ]
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Model m3 w/o outliers
+
+```{r m3_no_outliers}
+m3 <- glm(attrition ~ age + I(age^2) + businesstravel + dailyrate + 
+                    distancefromhome + education + educationfield +
+                    environmentsatisfaction + hourlyrate +
+                    jobinvolvement + 
+                    jobsatisfaction + maritalstatus + 
+                    monthlyrate + numcompaniesworked + overtime +
+                    percentsalaryhike + performancerating +
+                    stockoptionlevel +
+                    totalworkingyears + trainingtimeslastyear +
+                    yearsincurrentrole +
+                    yearssincelastpromotion + yearswithcurrmanager,
+                family = binomial(link = "logit"), data = train_minus_outliers)
+```
+
+* Does the model fit?
+
+```{r m3_summary_no_outliers}
+as.data.frame(round(coef(summary(m3)), 5)) %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `Pr(>|z|)` = cell_spec(`Pr(>|z|)`, "html",
+                           color = ifelse(`Pr(>|z|)` < 0.05, "red", "black"))
+  ) %>% 
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+data.frame("Residual Deviance" = m3$deviance, 
+           "Residual df" = m3$df.residual) %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(full_width = F)
+```
+
+* We see that model m3 without outliers in the data still fits by $\frac{deviance_{res}}{df_{res}} \leq 1$. Check the marginal model plots.
+
+Column
+-----------------------------------------------------------------------
+
+### Marginal Model Plots (scrollable)
+
+* Check the marginal model plots (mmp) of the quantitative predictors to see if the model is specified correctly
+
+```{r mmp_m3_no_outliers}
+# detach the original train data set 
+detach(train)
+
+# attach the train set that does not have the outliers
+attach(train_minus_outliers)
+
+mmp(m3, m3$linear.predictors)
+mmp(m3, age)
+mmp(m3, dailyrate)
+mmp(m3, distancefromhome)
+mmp(m3, hourlyrate)
+mmp(m3, monthlyrate)
+mmp(m3, numcompaniesworked)
+mmp(m3, percentsalaryhike)
+mmp(m3, trainingtimeslastyear)
+mmp(m3, yearsincurrentrole)
+mmp(m3, yearssincelastpromotion)
+mmp(m3, yearswithcurrmanager)
+```
+
+### Observations on model m3
+
+* After specifying the predictors correctly earlier, we saw that the linear fit of the model could, potentially, still improve. Therefore, we inspected the leverage and looked for outliers.  
+
+* We identified 34 outliers in the training set, and, for the purpose of this analysis, removed those outliers under the assumption that there was sufficient reason to do so. Recall, this is a simulated data set.  
+
+* After removing the outliers from the training set and re-running model m3 with the new data, we find that the overall linear fit of the model improved greatly.  
+
+* There still appears to be several predictors that are not significant, though. Let's run step-wise variable selection to see if we can further reduce the number of predictors in the model.  
+
+Variable Selection (Model m3) {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Fwd/Bwd Stepwise Selection
+
+```{r fwd_bwd_stepwise, results="hide"}
+# NOTE: here, we hide the results of the code chunk because it won't display 
+#   fully in the final knitted dashboard
+library(MASS)
+step.m3 <- stepAIC(m3, direction = "both")
+```
+
+```{r stepwise_formula_results}
+# View results of final fwd/bwd stepwise selection
+step.m3$anova
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Observations
+
+* Step-wise variable selection on model m3 removes seven variables. 
+
+* All seven variables removed from the model were not previously significant.
+
+* Interestingly, $dailyrate$ was not removed from the model even though it was not statistically significant before.
+
+Final Logistic Regr Model {data-navmenu="Logistic Regression"} 
+=======================================================================
+
+### Final Logistic Regression Model
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &\beta_0 + \beta_1age + \beta_{1a}age^2 + \beta_2businesstravel + \\
+                    &\beta_3dailyrate + \beta_5distancefromhome + \\
+                    &\beta_7educationfield + \beta_8environmentsatisfaction + \\
+                    &\beta_{11}jobinvolvement + \beta_{14}jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + \beta_{18}numcompaniesworked + \\
+                    &\beta_{19}overtime + \beta_{24}totalworkingyears + 
+                    \beta_{25}trainingtimeslastyear + \\
+                    &\beta_{28}yearsincurrentrole + \\
+                    &\beta_{29}yearssincelastpromotion 
+\end{align} 
+
+```{r final_logistic_model}
+# clean memory
+rm(m3, step.m3)
+
+final_logistic_mod <- glm(attrition ~ age + I(age^2) + businesstravel + dailyrate + 
+                    distancefromhome + educationfield +
+                    environmentsatisfaction + jobinvolvement + 
+                    jobsatisfaction + maritalstatus + 
+                    numcompaniesworked + overtime +
+                    totalworkingyears + trainingtimeslastyear +
+                    yearsincurrentrole + yearssincelastpromotion,
+                family = binomial(link = "logit"), data = train_minus_outliers)
+```
+
+```{r final_logistic_mod_summary}
+as.data.frame(round(coef(summary(final_logistic_mod)), 5)) %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `Pr(>|z|)` = cell_spec(`Pr(>|z|)`, "html",
+                           color = ifelse(`Pr(>|z|)` < 0.05, "red", "black"))
+  ) %>% 
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+data.frame("Residual Deviance" = final_logistic_mod$deviance, 
+           "Residual df" = final_logistic_mod$df.residual) %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(full_width = F)
+```
+
+SLR Model {data-navmenu="Sparse Logistic Regression"} 
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+```{r create_matrix}
+# - keep only the relevant variables from the training set 
+# - start with the same variables as model m3 (NOT the final logistic regr model)
+# - NOTE 1: we added the Age^2 term to the data for consistency with the final
+#     logistic regression model
+# - NOTE 2: cv.glmnet() requires the data to be in a matrix. data.matrix() seems
+#     to work best for converting the data to a matrix from a data frame
+
+xtrain_copy <- train_minus_outliers[, -c(2, 5, 10, 13, 14, 17, 23, 27, 28)]
+xtrain_copy$age_sq <- xtrain_copy$age^2
+xtrain_copy <- xtrain_copy[, c(1, 23, 2:22)]
+xtrain_copy <- data.matrix(xtrain_copy)
+ytrain_copy <- train_minus_outliers$attrition
+```
+
+### Notes
+
+* Before applying the Lasso method, we consider the following:
+  + $gender$, $relationshipsatisfaction$ and $worklifebalance$ are removed from the model because of their independence from the response variable ($attrition$).  See **_Logistic Regression_** $\rightarrow$ **_Check X vs. Y Independence_**.
+  + The 31 outliers identified in section **Logistic Regression** $\rightarrow$ **Leverage** were removed from the training data set prior to reduce the effects of outliers on the model.
+  + $department$, $joblevel$, $jobrole$, $monthlyincome$, and $yearsatcompany$ were removed because of high VIF/GVIF values. See **_Logistic Regression_** $\rightarrow$ **_Check VIFs_**.
+  + The quadratic term $age^2$ is added to the model because we saw earlier that $age$ is misspecified in the model. See **_Logistic Regression_** $\rightarrow$ **_Reduced Model(m2)_** and **_Reduced Model(m3)_** sections.
+  + For the remaining predictor terms, we will apply the Lasso method for variable selection.
+  + The starting model for SLR (lasso) is the same as model m3. See **_Logistic Regression_** $\rightarrow$ **_Reduced Model(m3)_**.
+  
+<br>
+
+Model before applying SLR (lasso)  
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &\beta_0 + \beta_1age + \beta_{1a}age^2 + \beta_2businesstravel + \\
+                    &\beta_3dailyrate + 
+                    \beta_5distancefromhome + \beta_6education + \\
+                    &\beta_7educationfield + \beta_8environmentsatisfaction + 
+                    \beta_{10}hourlyrate + \\
+                    &\beta_{11}jobinvolvement + \beta_{14}jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + \beta_{17}monthlyrate + \beta_{18}numcompaniesworked + \\
+                    &\beta_{19}overtime + \beta_{20}percentsalaryhike + 
+                    \beta_{21}performancerating + \\
+                    &\beta_{23}stockoptionlevel + \beta_{24}totalworkingyears + 
+                    \beta_{25}trainingtimeslastyear + \\
+                    &\beta_{28}yearsincurrentrole + \\
+                    &\beta_{29}yearssincelastpromotion + 
+                    \beta_{30}yearswithcurrmanager
+\end{align}  
+  
+### Sparse Logistic Regression (SLR) Model Fit
+
+```{r sparse_logistic_regression_fit}
+library(glmnet)
+
+glmnetFit <- cv.glmnet(x = xtrain_copy, 
+                       y = ytrain_copy,
+                       alpha = 1,
+                       family = "binomial")
+
+plot(glmnetFit)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### SLR Coefficients
+
+```{r SLR_coef}
+tempdf <- as.data.frame(as.matrix(
+  cbind(coef(glmnetFit, s = "lambda.min"),
+        coef(glmnetFit, s = "lambda.1se")))) 
+
+colnames(tempdf) <- c("coef_for_lambda_min", "coef_for_lambda_1se") 
+
+tempdf %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `coef_for_lambda_min` = cell_spec(`coef_for_lambda_min`, "html",
+                                      color = ifelse(abs(`coef_for_lambda_min`) < 0.01,
+                                                     "red", "black"))
+    ) %>%
+  mutate(
+    `coef_for_lambda_1se` = cell_spec(`coef_for_lambda_1se`, "html",
+                                      color = ifelse(abs(`coef_for_lambda_1se`) < 0.01,
+                                                     "red", "black"))
+    ) %>%
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+# clean memory
+rm(tempdf, xtrain_copy, ytrain_copy)
+```
+
+Logistic Regression Comparisons {data-navmenu="Sparse Logistic Regression"} 
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Final Logistic Regr Coefficients by Step-wise Var Select
+
+```{r final_logistic_regr_coefs}
+as.data.frame(round(coef(summary(final_logistic_mod)), 5)) %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `Pr(>|z|)` = cell_spec(`Pr(>|z|)`, "html",
+                           color = ifelse(`Pr(>|z|)` < 0.05, "red", "black"))
+  ) %>% 
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Final Logistic Regr Coef by Lasso Var Select
+
+```{r final_SLR_coefs}
+tempdf <- as.data.frame(as.matrix(
+  cbind(coef(glmnetFit, s = "lambda.min"),
+        coef(glmnetFit, s = "lambda.1se")))) 
+
+colnames(tempdf) <- c("coef_for_lambda_min", "coef_for_lambda_1se") 
+
+tempdf %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `coef_for_lambda_min` = cell_spec(`coef_for_lambda_min`, "html",
+                                      color = ifelse(abs(`coef_for_lambda_min`) < 0.01,
+                                                     "red", "black"))
+    ) %>%
+  mutate(
+    `coef_for_lambda_1se` = cell_spec(`coef_for_lambda_1se`, "html",
+                                      color = ifelse(abs(`coef_for_lambda_1se`) < 0.01,
+                                                     "red", "black"))
+    ) %>%
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+# clean memory
+rm(tempdf)
+```
+
+RF Model {data-navmenu="Random Forest"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Random Forest Model
+
+* We'll use the whole training set for the Random Forest model. It should be less affected by colinearity.  
+
+* We'll use the training set to identify important variables to keep and then re-run a more sparse model before measuring performance.
+
+* We'll also build two initial models based on: 1) training set w/ outliers and 2) training set w/o outliers
+
+* For the plots to the right:
+  + Green - class error for class 1 (i.e., $attrition$ = 1 (yes))
+  + Red - class error for class 0 (i.e., $attrition$ = 0 (no))
+  + Black - out of bag error
+  + NOTE: we see lower error for class 0 because there are more "No" responses to learn from in the data
+
+```{r rf_data}
+# NOTE: you must FACTOR the response variable here so that the RF model can 
+#   classify each instance as 0 or 1
+xtrain <- train[, -2]
+ytrain <- factor(train$attrition)
+
+xtrain_no_out <- train_minus_outliers[, -2]
+ytrain_no_out <- factor(train_minus_outliers$attrition)
+```
+
+```{r rf_model}
+library(randomForest)
+
+rfmod <- randomForest(x = xtrain,
+                      y = ytrain,
+                      ntree = 500,
+                      importance = T)
+
+rfmod_no_out <- randomForest(x = xtrain_no_out,
+                             y = ytrain_no_out,
+                             ntree = 500,
+                             importance = T)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### RF Model Plot (w/ outliers)
+
+```{r rfmod_plot}
+plot(rfmod)
+```
+
+### RF Model Plot (w/o outliers)
+
+```{r rfmod_plot_no_out}
+plot(rfmod_no_out)
+```
+
+Variable Importance (w/ Outliers) {data-navmenu="Random Forest"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/ outliers) - Mean Decr in Accuracy
+
+```{r rf_importance_type_one}
+var_imp <- importance(rfmod, type = 1)
+
+library(plotly)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseAccuracy,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/ outliers) - Mean Decr in Accuracy
+
+```{r}
+varImpPlot(rfmod, type = 1)
+```
+
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/ outliers) - Mean Decr in Node Impurity
+
+```{r rf_importance_type_two}
+var_imp <- importance(rfmod, type = 2)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseGini,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/ outliers) - Mean Decr in Node Impurity
+
+```{r}
+varImpPlot(rfmod, type = 2)
+```
+
+Variable Importance (w/o Outliers) {data-navmenu="Random Forest"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/o outliers) - Mean Decr in Accuracy
+
+```{r rf_importance_no_out_type_one}
+var_imp <- importance(rfmod_no_out, type = 1)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseAccuracy,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/o outliers) - Mean Decr in Accuracy
+
+```{r}
+varImpPlot(rfmod_no_out, type = 1)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/o outliers) - Mean Decr in Node Impurity
+
+```{r rf_importance_no_out_type_two}
+var_imp <- importance(rfmod_no_out, type = 2)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseGini,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/0 outliers) - Mean Decr in Node Impurity
+
+```{r}
+varImpPlot(rfmod_no_out, type = 2)
+
+# clean memory
+rm(var_imp, rnames, values)
+```
+
+Observations {data-navmenu="Random Forest"}
+=======================================================================
+
+### Observations
+
+* To compare bar plots, I chose to focus on predictor variables with a Mean Decrease in Accuracy $\geq 5$ for identifying important variables and to find a potentially more sparse model.
+
+* Based on the selected cut-off above, we will focus on the following as the most important since they agree for both random forest models, regardless of training data containing or not containing outliers:
+  + $age$
+  + $environmentsatisfaction$
+  + $joblevel$
+  + $jobrole$
+  + $maritalstatus$
+  + $monthlyincome$
+  + $overtime$
+  + $stockoptionlevel$
+  + $totalworkingyears$
+  + $yearsatcompany$
+  
+* Recall the variables noted as having correlations (colinearity) from the **_Initial Observations/Notes_** section. Although randomForest can handle data with colinearities, we see here that several correlated variables were given high importance. Particularly, consider the correlated relationships among $age$, $joblevel$, $monthlyincome$, $totalworkingyears$, and $yearsatcompany$.
+
+* Let's rerun an RF model on data that does not have the following variables:
+  + $totalworkingyears$ 
+    + because a company may or may not know this info
+    + we're assuming that the total number of years a person has been working is irrelevant regarding attrition (i.e., you can quit at any time, you can get another offer at any time, you can be fired at any time...all of which don't necessarily account for how long you've been in the workforce.)
+  + $yearsatcompany$ 
+    + this is more of an 'umbrella' measure that can overlap with other variables it's correlated with (ex. $yearswithcurrentmanager$)
+    + correlated with $monthlyincome$
+  + $monthlyincome$
+    + it's correlated with $age$ and $joblevel$
+    + it's reasonable to expect that $monthlyincome$ will be greater with a higher $age$ and/or $joblevel$
+
+
+```{r rf_data_repeat}
+# NOTE: you must FACTOR the response variable here so that the RF model can 
+#   classify each instance as 0 or 1
+xtrain <- train[, -c(2, 17, 25, 28)]
+ytrain <- factor(train$attrition)
+
+xtrain_no_out <- train_minus_outliers[, -c(2, 17, 25, 28)]
+ytrain_no_out <- factor(train_minus_outliers$attrition)
+```
+
+```{r rf_model_repeat}
+rfmod <- randomForest(x = xtrain,
+                      y = ytrain,
+                      ntree = 1000,
+                      importance = T)
+
+rfmod_no_out <- randomForest(x = xtrain_no_out,
+                             y = ytrain_no_out,
+                             ntree = 1000,
+                             importance = T)
+```
+
+Variable Importance 2 (w/ Outliers) {data-navmenu="Random Forest"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/ outliers) - Mean Decr in Accuracy
+
+```{r rf_importance_type_one_p2}
+var_imp <- importance(rfmod, type = 1)
+
+library(plotly)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseAccuracy,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/ outliers) - Mean Decr in Accuracy
+
+```{r}
+varImpPlot(rfmod, type = 1)
+```
+
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/ outliers) - Mean Decr in Node Impurity
+
+```{r rf_importance_type_two_p2}
+var_imp <- importance(rfmod, type = 2)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseGini,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/ outliers) - Mean Decr in Node Impurity
+
+```{r}
+varImpPlot(rfmod, type = 2)
+```
+
+Variable Importance 2 (w/o Outliers) {data-navmenu="Random Forest"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/o outliers) - Mean Decr in Accuracy
+
+```{r rf_importance_no_out_type_one_p2}
+var_imp <- importance(rfmod_no_out, type = 1)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseAccuracy,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/o outliers) - Mean Decr in Accuracy
+
+```{r}
+varImpPlot(rfmod_no_out, type = 1)
+```
+
+Column
+-----------------------------------------------------------------------
+
+### Variable Importance (w/o outliers) - Mean Decr in Node Impurity
+
+```{r rf_importance_no_out_type_two_p2}
+var_imp <- importance(rfmod_no_out, type = 2)
+
+rnames <- rownames(var_imp)
+values <- var_imp[, 1]
+names(values) <- NULL
+
+plot_ly(as.data.frame(var_imp),
+       x = ~rownames(as.data.frame(var_imp)),  
+       y = ~MeanDecreaseGini,
+       type = "bar") %>%
+  layout(xaxis = list(title = "Variable"))
+```
+
+### Variable Importance Plot (w/0 outliers) - Mean Decr in Node Impurity
+
+```{r}
+varImpPlot(rfmod_no_out, type = 2)
+
+# clean memory
+rm(var_imp, rnames, values)
+```
+
+Observations 2 {data-navmenu="Random Forest"}
+=======================================================================
+
+### Observations
+
+* Again, to compare bar plots, I chose to focus on predictor variables with a Mean Decrease in Accuracy $\geq 5$ for identifying important variables and to find a potentially more sparse model.
+
+* Based on the selected cut-offs above, we will focus on the following as the most important based on the Mean Decrease in Accuracy, of which these variables appeared in both RF model where data contained outliers and the RF model where the data did not contain outliers:
+  + $age$
+  + $educationfield$
+  + $environmentsatisfaction$
+  + $jobinvolvement$
+  + $joblevel$
+  + $jobrole$
+  + $maritalstatus$
+  + $numcompaniesworked$
+  + $overtime$
+  + $stockoptionlevel$
+  + $yearsincurrentrole$
+
+* Now, let's develop a sparse random forest model that uses only the 11 most important variables we just identified.
+
+RF Reduced Model {data-navmenu="Random Forest"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+```{r rf_data_reduced}
+xtrain_red <- train[, c(1, 8, 9, 12, 13, 14, 16, 19, 20, 24, 29)]
+ytrain_red <- factor(train$attrition)
+
+xtrain_no_out_red <- train_minus_outliers[, c(1, 8, 9, 12, 13, 14, 16, 19, 20, 24, 29)]
+ytrain_no_out_red <- factor(train_minus_outliers$attrition)
+```
+
+```{r rf_model_reduced}
+rfmod_red <- randomForest(x = xtrain,
+                      y = ytrain,
+                      ntree = 1000,
+                      importance = T)
+
+rfmod_no_out_red <- randomForest(x = xtrain_no_out,
+                             y = ytrain_no_out,
+                             ntree = 1000,
+                             importance = T)
+```
+
+### RF Reduced Model Plot (w/ outliers)
+
+```{r rfmod_plot_reduced}
+plot(rfmod_red)
+```
+
+### RF Reduced Model Plot (w/o outliers)
+
+```{r rfmod_plot_no_out_reduced}
+plot(rfmod_no_out_red)
+
+# clean memory
+rm(xtrain, xtrain_no_out, xtrain_no_out_red, xtrain_red)
+rm(ytrain, ytrain_no_out, ytrain_no_out_red, ytrain_red)
+```
+
+Model Performance {data-navmenu="Performance"}
+=======================================================================
+
+```{r mod_perform_logistic_final}
+library(AUC)
+
+# make predictions ####
+pred_logistic_final_test <- predict(final_logistic_mod, 
+                                   newdata = test[, c(1, 3:31)],
+                                   type = "response")
+
+# roc ####
+roc_logistic_final_test <- roc(pred_logistic_final_test, factor(test$attrition))
+
+# AUC calcs ####
+auc_logistic_final_test <- AUC::auc(roc_logistic_final_test)
+
+# classification rates ####
+fitted_probs_logistic_test <- ifelse(pred_logistic_final_test > 0.5, 1, 0)
+observed_ytest <- test$attrition  # this can be used for all performance calcs below
+
+correct_classify_logistic_test <- round(mean(fitted_probs_logistic_test == observed_ytest), 5)
+
+misclassify_logistic_test <- round(mean(fitted_probs_logistic_test != observed_ytest), 5)
+```
+
+```{r mod_perform_SLR}
+# create copies of the data sets with the relevant predictors ####
+xtest <- test[, -c(2, 5, 10, 13, 14, 17, 23, 27, 28)]
+xtest$age_sq <- xtest$age^2
+xtest <- xtest[, c(1, 23, 2:22)]
+xtest <- data.matrix(xtest)
+ytest <- test$attrition
+
+# make predictions ####
+pred_SLR_test_min <- predict(glmnetFit, newx = xtest, 
+                            s = "lambda.min", type = "response")
+pred_SLR_test_1se <- predict(glmnetFit, newx = xtest, 
+                            s = "lambda.1se", type = "response")
+
+# roc ####
+
+roc_SLR_test_min <- roc(pred_SLR_test_min, factor(ytest))
+roc_SLR_test_1se <- roc(pred_SLR_test_1se, factor(ytest))
+
+# AUC calcs  ####
+auc_SLR_test_min <- AUC::auc(roc_SLR_test_min)
+auc_SLR_test_1se <- AUC::auc(roc_SLR_test_1se)
+
+# classification rates ####
+fitted_probs_SLR_test_min <- ifelse(pred_SLR_test_min > 0.5, 1, 0)
+fitted_probs_SLR_test_1se <- ifelse(pred_SLR_test_1se > 0.5, 1, 0)
+
+correct_classify_SLR_test_min <- round(mean(fitted_probs_SLR_test_min == observed_ytest), 5)
+correct_classify_SLR_test_1se <- round(mean(fitted_probs_SLR_test_1se == observed_ytest), 5)
+
+misclassify_SLR_test_min <- round(mean(fitted_probs_SLR_test_min != observed_ytest), 5)
+misclassify_SLR_test_1se <- round(mean(fitted_probs_SLR_test_1se != observed_ytest), 5)
+
+# clean memory
+rm(xtest, ytest)
+```
+
+```{r mod_perform_RF}
+# make predictions ####
+pred_RF_full_with_outliers_test <- predict(rfmod,
+                                          newdata = test[, c(1, 3:31)],
+                                          type = "prob")[, 2]
+pred_RF_full_no_outliers_test <- predict(rfmod_no_out,
+                                          newdata = test[, c(1, 3:31)],
+                                          type = "prob")[, 2]
+pred_RF_reduced_with_outliers_test <- predict(rfmod_red,
+                                          newdata = test[, c(1, 3:31)],
+                                          type = "prob")[, 2]
+pred_RF_reduced_no_outliers_test <- predict(rfmod_no_out_red,
+                                          newdata = test[, c(1, 3:31)],
+                                          type = "prob")[, 2]
+
+# roc ####
+roc_RF_full_with_outliers_test <- roc(pred_RF_full_with_outliers_test, factor(test$attrition))
+roc_RF_full_no_outliers_test <- roc(pred_RF_full_no_outliers_test, factor(test$attrition))
+roc_RF_reduced_with_outliers_test <- roc(pred_RF_reduced_with_outliers_test, factor(test$attrition))
+roc_RF_reduced_no_outliers_test <- roc(pred_RF_reduced_no_outliers_test, factor(test$attrition))
+    
+# AUC calcs ####
+auc_RF_full_with_outliers_test <- AUC::auc(roc_RF_full_with_outliers_test)
+auc_RF_full_no_outliers_test <- AUC::auc(roc_RF_full_no_outliers_test)
+auc_RF_reduced_with_outliers_test <- AUC::auc(roc_RF_reduced_with_outliers_test)
+auc_RF_reduced_no_outliers_test <- AUC::auc(roc_RF_reduced_no_outliers_test)
+
+# classification rates ####
+# NOTE: we can use the same observed_yval and observed_ytest variables from the
+#   mod_perform_logistic_final code chunk
+fitted_probs_RF_full_with_outliers_test <- ifelse(pred_RF_full_with_outliers_test > 0.5, 1, 0)
+fitted_probs_RF_full_no_outliers_test <- ifelse(pred_RF_full_no_outliers_test > 0.5, 1, 0)
+fitted_probs_RF_reduced_with_outliers_test <- ifelse(pred_RF_reduced_with_outliers_test > 0.5, 1, 0)
+fitted_probs_RF_reduced_no_outliers_test <- ifelse(pred_RF_reduced_no_outliers_test > 0.5, 1, 0)
+
+
+correct_classify_RF_full_with_outliers_test <- round(mean(fitted_probs_RF_full_with_outliers_test == observed_ytest), 5)
+correct_classify_RF_full_no_outliers_test <- round(mean(fitted_probs_RF_full_no_outliers_test == observed_ytest), 5)
+correct_classify_RF_reduced_with_outliers_test <- round(mean(fitted_probs_RF_reduced_with_outliers_test == observed_ytest), 5)
+correct_classify_RF_reduced_no_outliers_test <- round(mean(fitted_probs_RF_reduced_no_outliers_test == observed_ytest), 5)
+
+
+misclassify_RF_full_with_outliers_test <- round(mean(fitted_probs_RF_full_with_outliers_test != observed_ytest), 5)
+misclassify_RF_full_no_outliers_test <- round(mean(fitted_probs_RF_full_no_outliers_test != observed_ytest), 5)
+misclassify_RF_reduced_with_outliers_test <- round(mean(fitted_probs_RF_reduced_with_outliers_test != observed_ytest), 5)
+misclassify_RF_reduced_no_outliers_test <- round(mean(fitted_probs_RF_reduced_no_outliers_test != observed_ytest), 5)
+```
+
+```{r perform_results}
+# clean memory
+rm(observed_ytest)
+
+# create vectors
+auc_test_vec <- c(auc_logistic_final_test,
+                  auc_SLR_test_min,
+                  auc_SLR_test_1se,
+                  auc_RF_full_with_outliers_test,
+                  auc_RF_full_no_outliers_test,
+                  auc_RF_reduced_with_outliers_test,
+                  auc_RF_reduced_no_outliers_test)
+
+# clean memory
+rm(auc_logistic_final_test, auc_SLR_test_min, auc_SLR_test_1se,
+   auc_RF_full_with_outliers_test, auc_RF_full_no_outliers_test,
+   auc_RF_reduced_with_outliers_test, auc_RF_reduced_no_outliers_test)
+
+
+correct_classify_test_vec <- c(correct_classify_logistic_test,
+                               correct_classify_SLR_test_min,
+                               correct_classify_SLR_test_1se,
+                               correct_classify_RF_full_with_outliers_test,
+                               correct_classify_RF_full_no_outliers_test,
+                               correct_classify_RF_reduced_with_outliers_test,
+                               correct_classify_RF_reduced_no_outliers_test)
+
+# clean memory
+rm(correct_classify_logistic_test, correct_classify_SLR_test_min,
+   correct_classify_SLR_test_1se, correct_classify_RF_full_with_outliers_test,
+   correct_classify_RF_full_no_outliers_test,
+   correct_classify_RF_reduced_with_outliers_test,
+   correct_classify_RF_reduced_no_outliers_test)
+
+
+misclassify_test_vec <- c(misclassify_logistic_test,
+                          misclassify_SLR_test_min,
+                          misclassify_SLR_test_1se,
+                          misclassify_RF_full_with_outliers_test,
+                          misclassify_RF_full_no_outliers_test,
+                          misclassify_RF_reduced_with_outliers_test,
+                          misclassify_RF_reduced_no_outliers_test)
+
+# clean memory
+rm(misclassify_logistic_test, misclassify_SLR_test_min,
+   misclassify_SLR_test_1se, misclassify_RF_full_with_outliers_test,
+   misclassify_RF_full_no_outliers_test,
+   misclassify_RF_reduced_with_outliers_test,
+   misclassify_RF_reduced_no_outliers_test)
+
+# build data frames
+performance_test_df <- data.frame(cbind(auc_test_vec,
+                                       correct_classify_test_vec,
+                                       misclassify_test_vec),
+                                 stringsAsFactors = F)
+
+colnames(performance_test_df) <- 
+  c("AUC",
+    "Correct Classification Rate",
+    "Misclassification Rate")
+
+rownames(performance_test_df) <- 
+  c("Logistic Regr",
+    "SLR (lambda.min)",
+    "SLR (lambda.1se)",
+    "RF (Saturated Model)*",
+    "RF (Saturated Model)",
+    "RF (Reduced Model)*",
+    "RF (Reduced Model)")
+
+# clean memory
+rm(auc_test_vec, correct_classify_test_vec, misclassify_test_vec)
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### Performance - test set
+
+```{r test_results}
+performance_test_df %>%
+  rownames_to_column("var") %>%
+  mutate(
+    `AUC` = cell_spec(`AUC`, "html",
+                                      color = ifelse(`AUC` == max(`AUC`),
+                                                     "red", "black"))
+    ) %>%
+  mutate(
+    `Correct Classification Rate` = cell_spec(`Correct Classification Rate`, "html",
+                                      color = ifelse(`Correct Classification Rate` == max(`Correct Classification Rate`),
+                                                     "red", "black"))
+    ) %>%
+  column_to_rownames("var") %>%
+  kable(format = "html", escape = F) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F) %>%
+  footnote(symbol = c("Training set contained outliers during model building."))
+
+# clean memory
+rm(performance_test_df)
+```
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### Receiver Operating Curves (ROCs)
+
+```{r roc_curves}
+plot(roc_logistic_final_test, col = "black", main = "ROC Curves")
+plot(roc_SLR_test_min, col = "blue", add = T)
+plot(roc_SLR_test_1se, col = "green", add = T)
+plot(roc_RF_full_with_outliers_test, col = "brown", add = T)
+plot(roc_RF_full_no_outliers_test, col = "red", add = T)
+plot(roc_RF_reduced_with_outliers_test, col = "purple", add = T)
+plot(roc_RF_reduced_no_outliers_test, col = "orange", add = T)
+legend(0.5, 0.45, legend = c("Logistic Regr",
+                  "SLR (lasso) (lambda_min)",
+                  "SLR (lasso) (lambda_1se)",
+                  "RF_full_w/_outliers",
+                  "RF_full_w/o_outliers",
+                  "RF_reduced_w/_outliers",
+                  "RF_reduced_w/o_outliers"),
+       col = c("black", "blue", "green", "brown", "red", "purple", "orange"),
+       lty = 1,
+       cex = 0.7,
+       text.font = 1)
+```
+
+
+Predictions {data-navmenu="Performance"}
+=======================================================================
+
+### Predicted Probabilities & Class
+
+```{r predictions_table}
+df <- data.frame(cbind(1:nrow(test),
+                       test$attrition,
+                       pred_logistic_final_test,
+                       fitted_probs_logistic_test,
+                       pred_SLR_test_min,
+                       fitted_probs_SLR_test_min,
+                       pred_SLR_test_1se,
+                       fitted_probs_SLR_test_1se,
+                       pred_RF_full_with_outliers_test,
+                       fitted_probs_RF_full_with_outliers_test,
+                       pred_RF_full_no_outliers_test,
+                       fitted_probs_RF_full_no_outliers_test,
+                       pred_RF_reduced_with_outliers_test,
+                       fitted_probs_RF_reduced_with_outliers_test,
+                       pred_RF_reduced_no_outliers_test,
+                       fitted_probs_RF_reduced_no_outliers_test))
+
+colnames(df) <- c("test_data_index",
+                  "attrition",
+                  "Logistic Regr Prob",
+                  "Logistic Regr Class",
+                  "SLR (lambda_min) Prob",
+                  "SLR (lambda_min) Class",
+                  "SLR (lambda_1se) Prob",
+                  "SLR (lambda_1se) Class",
+                  "RF_full_w/_outliers Prob",
+                  "RF_full_w/_outliers Class",
+                  "RF_full_w/o_outliers Prob",
+                  "RF_full_w/o_outliers Class",
+                  "RF_reduced_w/_outliers Prob",
+                  "RF_reduced_w/_outliers Class",
+                  "RF_reduced_w/o_outliers Prob",
+                  "RF_reduced_w/o_outliers Class")
+
+df %>%
+    rownames_to_column("var") %>%
+    mutate(
+        `Logistic Regr Class` = cell_spec(`Logistic Regr Class`, "html",
+                                          background = ifelse(`Logistic Regr Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    mutate(
+        `SLR (lambda_min) Class` = cell_spec(`SLR (lambda_min) Class`, "html",
+                                          background = ifelse(`SLR (lambda_min) Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    mutate(
+        `SLR (lambda_1se) Class` = cell_spec(`SLR (lambda_1se) Class`, "html",
+                                          background = ifelse(`SLR (lambda_1se) Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    mutate(
+        `RF_full_w/_outliers Class` = cell_spec(`RF_full_w/_outliers Class`, "html",
+                                          background = ifelse(`RF_full_w/_outliers Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    mutate(
+        `RF_full_w/o_outliers Class` = cell_spec(`RF_full_w/o_outliers Class`, "html",
+                                          background = ifelse(`RF_full_w/o_outliers Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    mutate(
+        `RF_reduced_w/_outliers Class` = cell_spec(`RF_reduced_w/_outliers Class`, "html",
+                                          background = ifelse(`RF_reduced_w/_outliers Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    mutate(
+        `RF_reduced_w/o_outliers Class` = cell_spec(`RF_reduced_w/o_outliers Class`, "html",
+                                          background = ifelse(`RF_reduced_w/o_outliers Class` != `attrition`, "yellow", "white"))
+    ) %>%
+    column_to_rownames("var") %>%
+    kable(format = "html", escape = F) %>%
+    kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+
+#clean memory
+rm(df)
+```
+
+Differences {data-navmenu="Performance"}
+=======================================================================
+
+Column{.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Number misclassified 
+
+```{r different_preds}
+index_misclass_logsitic <- which(fitted_probs_logistic_test != test$attrition)
+index_misclass_SLR_test_min <- which(fitted_probs_SLR_test_min != test$attrition)
+index_misclass_SLR_test_1se <- which(fitted_probs_SLR_test_1se != test$attrition)
+index_misclass_RF_full_with_outliers_test <- which(fitted_probs_RF_full_with_outliers_test != test$attrition)
+index_misclass_RF_full_no_outliers_test <- which(fitted_probs_RF_full_no_outliers_test != test$attrition)
+index_misclass_RF_reduced_with_outliers_test <- which(fitted_probs_RF_reduced_with_outliers_test != test$attrition)
+index_misclass_RF_reduced_no_outliers_test <- which(fitted_probs_RF_reduced_no_outliers_test != test$attrition)
+
+# misclassify rollup
+cat("# of misclassified instances - Logistic Regr:",
+             length(index_misclass_logsitic), sep = "  ")
+cat("# of misclassified instances - SLR(lambda_min):",
+             length(index_misclass_SLR_test_min), sep = "  ")
+cat("# of misclassified instances - SLR(lambda_1se):",
+             length(index_misclass_SLR_test_1se), sep = "  ")
+cat("# of misclassified instances - RF_full_w/_outliers:", 
+      length(index_misclass_RF_full_with_outliers_test), sep = "  ")
+cat("# of misclassified instances - RF_full_w/o_outliers:", 
+      length(index_misclass_RF_full_no_outliers_test), sep = "  ")
+cat("# of misclassified instances - RF_reduced_w/_outliers:",
+      length(index_misclass_RF_reduced_with_outliers_test), sep = "  ")
+cat("# of misclassified instances - RF_reduced_w/o_outliers:",
+      length(index_misclass_RF_reduced_no_outliers_test), sep = "  ")
+
+# clean memory
+rm(fitted_probs_logistic_test,
+   fitted_probs_SLR_test_min,
+   fitted_probs_SLR_test_1se,
+   fitted_probs_RF_full_with_outliers_test,
+   fitted_probs_RF_full_no_outliers_test,
+   fitted_probs_RF_reduced_with_outliers_test,
+   fitted_probs_RF_reduced_no_outliers_test)
+
+rm(pred_logistic_final_test,
+   pred_SLR_test_min,
+   pred_SLR_test_1se,
+   pred_RF_full_with_outliers_test,
+   pred_RF_full_no_outliers_test,
+   pred_RF_reduced_with_outliers_test,
+   pred_RF_reduced_no_outliers_test)
+```
+
+### Misclass Agreements (continuous)
+
+```{r misclass_agree_cont, fig.width=8}
+# misclassifications that agree across ALL models
+temp <- Reduce(intersect, list(index_misclass_logsitic,
+                       index_misclass_SLR_test_min,
+                       index_misclass_SLR_test_1se,
+                       index_misclass_RF_full_with_outliers_test,
+                       index_misclass_RF_full_no_outliers_test,
+                       index_misclass_RF_reduced_with_outliers_test,
+                       index_misclass_RF_reduced_no_outliers_test))
+
+df <- data.frame(cbind("index" = temp, test[temp, ]))
+
+plot_histogram(df, nrow = 3, ncol = 3)
+```
+
+### Misclass Agreements (discrete)
+
+```{r misclass_agree_discrete, fig.width=8}
+plot_bar(df, nrow = 3, ncol = 3)
+```
+
+### Misclassified (All models agree) 
+
+* This is a table of the test data instances that were misclassified. These specific instances were misclassified across all models applied.  
+
+```{r}
+cat("# of the SAME missclassified instances that occur across ALL models:",
+             length(temp), sep = "  ")
+```
+
+<br> 
+
+```{r misclass_data}
+df <- data.frame(cbind("index" = temp, test[temp, ]))
+
+df %>%
+    kable(format = "html", escape = F) %>%
+    kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+
+# clean memory
+rm(df, temp)
+```
+
+Observations & Notes {data-navmenu="Performance"}
+=======================================================================
+
+### Observations & Notes
+
+* The reduced Random Forest model on data without outliers has the best AUC and classification rate on the test set.
+
+* The logistic regression model built on data without outliers has the best correct classfication rate on the test set.
+
+* All random forest models had better AUC values than the logistic regression model, but each also had a lower correct classification rate than the logistic regression model. However, the differences were small (classification rate difference between approximately (0.009, 0.011) and AUC differences between approximately (0.0023, 0.0091)).
+
+* After doing some reading on-line, disagreements between AUC performance and Correct Classification Rate may occur because of having unbalanced data sets and/or having an accuracy threshold value of 0.5 (which was used in this project). To troubleshoot any of these issues, futher examination is needed of the ROC curves, threshold values used, predicted probabilities (possibly), and/or other performance measures (i.e., sensitivity, specificity, etc.). Most likely, I suspect that the issue of not having both the best AUC with the highest classification rate is related to the data set being unbalanced.
+
+* Upon inspecting the ROC curves, we note that the area involving the greatest disagreement between the logistic regression model and the random forest models exists where $1-specificity$ is between $(0.25, 0.5)$. 
+
+* Given the previous work, if the objective is predicting attrition then applying the reduced/sparse random forest model on data that does not contain outliers and/or correlated predictor variables appears to be the best method to use (of those explored here). 
+
+* For the purpose of this project/exercise, I want to explore how various predictor variables affect the odds or probability of $attrition = 1 (yes)$. To do so, I am choosing the **_logistic regression model_** to gain further insights from the data. This model is chosen because:
+    + it's more easly interpreted for inference purposes
+    + it has the best correct classification rate
+    + it's AUC difference is is less that 0.01 compared to other models 
+    
+Chosen Model {data-navmenu="Insights"}
+=======================================================================
+
+```{r clean_memory}
+rm(glmnetFit, rfmod, rfmod_no_out, rfmod_red, rfmod_no_out_red,
+   train_minus_outliers, test)
+
+rm(roc_logistic_final_test, roc_RF_full_no_outliers_test,
+   roc_RF_full_with_outliers_test, roc_RF_reduced_no_outliers_test,
+   roc_RF_reduced_with_outliers_test, roc_SLR_test_1se,
+   roc_SLR_test_min)
+```
+
+### Chosen model 
+
+\begin{align}
+  logit[P(attrition = 1 (Yes))] = &11.86865 - 0.36314age + 0.00426age^2 + \beta_2businesstravel \\
+                    &- 0.00064dailyrate + 0.06069distancefromhome + \\
+                    &\beta_7educationfield - 0.90788environmentsatisfaction \\
+                    &- 1.19419jobinvolvement - 0.42537jobsatisfaction + \\
+                    &\beta_{15}maritalstatus + 0.29720numcompaniesworked + \\
+                    &\beta_{19}overtime - 0.20686totalworkingyears \\ 
+                    &- 0.29303trainingtimeslastyear \\
+                    &- 0.20462yearsincurrentrole + \\
+                    &0.26748yearssincelastpromotion 
+\end{align}
+
+where \[\beta_2businesstravel =
+    \begin{cases}
+        0, \quad for \enspace businesstravel = non-travel(1)\\
+        &   \\
+        2.44736, \quad for \enspace businesstravel = travel \enspace rarely(2)\\
+        &   \\
+        4.06929, \quad for \enspace businesstravel =  travel \enspace frequently(3)
+    \end{cases}
+\]
+
+<br>
+
+\[\beta_7educationfield =
+    \begin{cases}
+        0, \quad for \enspace educationfield = human \enspace resources(1)\\
+        &   \\
+        -1.76682, \quad for \enspace educationfield = life \enspace sciences(2)\\
+        &   \\
+        -0.53888, \quad for \enspace educationfield = marketing(3)\\
+        &   \\
+        -2.07068, \quad for \enspace educationfield = medical(4)\\
+        &   \\
+        -3.11794, \quad for \enspace educationfield = other(5)\\
+        &   \\
+        -0.13154, \quad for \enspace educationfield = technical \enspace degree(6)\\
+    \end{cases}
+\]
+
+<br>  
+
+\[\beta_{15}maritalstatus =
+    \begin{cases}
+        0, \quad for \enspace maritalstatus = single(1)\\
+        &   \\
+        -1.60791, \quad for \enspace maritalstatus = married(2)\\
+        &   \\
+        -1.68362, \quad for \enspace maritalstatus = divorced(3)\\
+    \end{cases}
+\]
+
+<br>  
+
+\[\beta_{19}overtime =
+    \begin{cases}
+        0, \quad for \enspace overtime = no(1)\\
+        &   \\
+        3.13669, \quad for \enspace overtime = yes(2)\\
+    \end{cases}
+\]
+
+Searchable Data Table  {data-navmenu="Insights"}
+=======================================================================
+
+```{r add_pred_probs_and_class}
+# add column for the estimated predicted prob
+temp <- predict(final_logistic_mod, 
+                newdata = data_copy, type = "response")
+data_copy_w_est_prob_of_attrit <- data_copy
+data_copy_w_est_prob_of_attrit$est_prob_attrit <- round(temp, 4) * 100
+data_copy_w_est_prob_of_attrit <- data_copy_w_est_prob_of_attrit[, c(1,2,32,3:31)]
+
+# add indicator column for outliers
+data_copy_w_est_prob_of_attrit$outlier <- rep(0, nrow(data_copy_w_est_prob_of_attrit))
+data_copy_w_est_prob_of_attrit$outlier[outliers] <- "yes"
+data_copy_w_est_prob_of_attrit$outlier[grep(0, data_copy_w_est_prob_of_attrit$outlier)] <- "no"
+
+# add indicator column for high leverage instances
+data_copy_w_est_prob_of_attrit$highlev <- rep(0, nrow(data_copy_w_est_prob_of_attrit))
+data_copy_w_est_prob_of_attrit$highlev[highlevs] <- "yes"
+data_copy_w_est_prob_of_attrit$highlev[grep(0, data_copy_w_est_prob_of_attrit$highlev)] <- "no"
+
+# reorder df
+data_copy_w_est_prob_of_attrit <- data_copy_w_est_prob_of_attrit[, c(33, 34, 1:32)]
+
+# add predicted class
+data_copy_w_est_prob_of_attrit$pred_class <- ifelse(data_copy_w_est_prob_of_attrit$est_prob_attrit > 0.5, "yes", "no")
+
+data_copy_w_est_prob_of_attrit <- data_copy_w_est_prob_of_attrit[, c(1:4,
+                                                                     35,
+                                                                     5:34)]
+
+# clean memory
+rm(temp)
+```
+
+```{r searchable_table}
+DT::datatable(data_copy_w_est_prob_of_attrit,
+              filter = "top",
+              extensions = "Buttons",
+              options = list(autoWidth = T,
+                             pageLength = 10,
+                             autoHideNavigation = F,
+                             dom = "Bfrtip",
+                             buttons = c("copy",
+                                         "csv",
+                                         "print"),
+                             searchHighlight = T
+                             )
+              )
+```
+
+Interpretations  {data-navmenu="Insights"}
+=======================================================================
+
+Column
+-----------------------------------------------------------------------
+
+### Continuous/numerical variable (scrollable)
+
+* For every one-year increase in $age$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-0.36314} = 0.6955$, meaning that there's a 30.5% decrease in the odds of $attrition = Yes$, holding all other variables fixed. Furthermore, since there is a quadratic (squared) term for $age$ we see that the linear effect of $age$ is not constant (i.e., a linear slope). Instead, we see that the slope for $age$ changes at each additional year of age. We now see that the effect of age on the estimated odds of $attrition = Yes$ decreases, initially, is minimized at age 43, and after age 43 the estimated odds of $attrition = Yes$ increases, holding all other variables fixed. See the following plot
+
+* For every one-dollar/day increase in $dailyrate$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-0.00064} = 0.9994$, meaning that there's a 0.0006% decrease in the odds of $attrition = Yes$, holding all other variables fixed.
+
+* For every 1-mile increase in $distancefromhome$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{0.06069} = 1.0626$, meaning that there's a 6.26% increase in the odds of $attrition = Yes$, holding all other variables fixed.
+
+* For every 1-unit increase in $numcompaniesworked$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{0.29720} = 1.3461$, meaning that there's a 34.6% increase in the odds of $attrition = Yes$, holding all other variables fixed.
+
+* For every 1-unit increase in $trainingtimeslastyear$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-0.29303} = 0.7460$, meaning that there's a 25.4% decrease in the odds of $attrition = Yes$, holding all other variables fixed.
+
+* For every 1-year increase in $yearsincurrentrole$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-0.20462} = 0.8150$, meaning that there's a 18.5% decrease in the odds of $attrition = Yes$, holding all other variables fixed.
+
+* For every 1-year increase in $yearssincelastpromotion$ the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{0.26748} = 1.3067$, meaning that there's a 30.7% increase in the odds of $attrition = Yes$, holding all other variables fixed.
+
+### Categorical variables (scrollable)
+
+* For every 1-unit increase in $environmentsatisfaction$ rating the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-0.90788} = 0.4034$, meaning that there's a 59.7% decrease in the odds of $attrition = Yes$ from the previous rating level, holding all other variables fixed.
+
+* For every 1-unit increase in $jobinvolvement$ rating the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-1.19419} = 0.3029$, meaning that there's a 69.7% decrease in the odds of $attrition = Yes$ from the previous rating level, holding all other variables fixed.
+
+* For every 1-unit increase in $jobsatisfaction$ rating the estimated odds of $attrition = Yes$ increases by a multiplicative factor of $e^{-0.42537} = 0.6535$, meaning that there's a 34.7% decrease in the odds of $attrition = Yes$ from the previous rating level, holding all other variables fixed.
+
+* For $businesstravel = rarely travel$, the estimated odds of $attrition = Yes$ is $e^{2.44736} = 11.5578$ times the estimated odds for $businesstravel = non-travel$. The estimated odds is 1055% greater for the $businesstravel = rarely travel$ group.
+
+* For $businesstravel = travel frequently$, the estimated odds of $attrition = Yes$ is $e^{4.06929} = 58.5154$ times the estimated odds for $businesstravel = non-travel$. The estimated odds is 5752% greater for the $businesstravel = travel frequently$ group.
+
+* For $businesstravel = travel frequently$, the estimated odds of $attrition = Yes$ is $e^{4.06929-2.44736} = 5.0629$ times the estimated odds for $businesstravel = rarely travel$. The estimated odds is 407% greater for the $businesstravel = travel frequently$ group.
+
+* For $educationfield = life sciences$, the estimated odds of $attrition = Yes$ is $e^{-1.76682} = 0.1709$ times the estimated odds for $educationfield = human resources$. The estimated odds is 82.1% lower for the $educationfield = life sciences$ group.
+
+* For $educationfield = marketing$, the estimated odds of $attrition = Yes$ is $e^{-0.53888} = 0.5834$ times the estimated odds for $educationfield = human resources$. The estimated odds is 46.2% lower for the $educationfield = marketing$ group.
+
+* For $educationfield = medical$, the estimated odds of $attrition = Yes$ is $e^{-2.07068} = 0.1261$ times the estimated odds for $educationfield = human resources$. The estimated odds is 87.4% lower for the $educationfield = medical$ group.
+
+* For $educationfield = other$, the estimated odds of $attrition = Yes$ is $e^{-3.11794} = 0.0442$ times the estimated odds for $educationfield = human resources$. The estimated odds is 95.6% lower for the $educationfield = other$ group.
+
+* For $educationfield = technical degree$, the estimated odds of $attrition = Yes$ is $e^{-0.13154} = 0.8767$ times the estimated odds for $educationfield = human resources$. The estimated odds is 12.3% lower for the $educationfield = technical degree$ group.
+
+* For $maritalstatus = married$, the estimated odds of $attrition = Yes$ is $e^{-1.60791} = 0.2003$ times the estimated odds for $maritalstatus = single$. The estimated odds is 80% lower for the $maritalstatus = married$ group.
+
+* For $maritalstatus = divorced$, the estimated odds of $attrition = Yes$ is $e^{-1.68362} = 0.1857$ times the estimated odds for $maritalstatus = single$. The estimated odds is 81.4% lower for the $maritalstatus = divorced$ group.
+
+* For $overtime = yes$, the estimated odds of $attrition = Yes$ is $e^{3.13669} = 23.0275$ times the estimated odds for $overtime = no$. The estimated odds is 2202% greater for the $overtime = yes$ group.
+
+Column
+-----------------------------------------------------------------------
+
+### Age Effect
+
+```{r age_effects}
+odds_fn <- function(x) {exp(-0.36314*x + 0.00426*x^2)}
+
+age <- seq(min(data_copy_w_est_prob_of_attrit$age), max(data_copy_w_est_prob_of_attrit$age), by = 1)
+
+odds <- odds_fn(age)
+
+age_data <- data.frame(cbind(age, odds))
+
+ggplot(age_data, aes(age, odds)) + geom_line() + geom_vline(xintercept = age_data$age[which(odds == min(odds))], color = "steel blue")
+
+# clean memory
+rm(odds_fn, age, odds, age_data)
+```
+
+### Observations
+
+**_Variables with no information value_**  
+* $employeecount$ - only one unique value; each "1" represents a single employee  
+* $over18$ - only one unique value; all employees are $geq$ 18 years old  
+* $standardhours$ - only one unique value; each employee works a standard 80-hr work week over a two-week period  
+* $employeenumber$ - value represents an indexing method to identify each employee  
+
+**_Variables not impacting the model & its outcome_**  
+* Independence tests during logistic regression modeling indicated that the following variables had no relationship with the response variable. These variables were excluded from the model due to variable independence:  
+    + $gender$  
+    + $relationshipsatisfaction$  
+    + $worklifebalance$  
+    
+**_Variables removed due to colinearity_**  
+* The following variables were removed during logistic regression modeling because they were highly correlated with other variables in the model:  
+    + $department$  
+    + $joblevel$  
+    + $jobrole$  
+    + $montlyincome$  
+    + $yearsatcompany$  
+    
+**_Categorical predictor combination contributing to highest estimated $attrition = Yes$_**  
+* $businesstravel = travel frequently$  
+* $educationfield = human resources$  
+* $jobinvolvement = low$  
+* $jobsatisfaction = low$  
+* $maritalstatus = single$  
+* $overtime = yes$  
+
+**_Categorical predictor combination contributing to lowest estimated $attrition = Yes$_**  
+* $businesstravel = never$  
+* $educationfield = other$  
+* $jobinvolvement = very high$  
+* $jobsatisfaction = very high$  
+* $maritalstatus = divorced$  
+* $overtime = no$  
+
+**_Variables affecting attrition the most_**  
+* $numcompaniesworked$ and $yearssincelastpromotion$ each lead to an **increase** in the odds of attrition as the variable value increases  
+* $trainingtimeslastyear$, $yearsincurrentrole$, $enviornmentsatisfaction$, $jobinvolvement$, and $jobsatisfaction$ each lead to a notable **decrease** as the variable value increases  
+
+Post-modeling Exploration  {data-navmenu="Insights"}
+=======================================================================
+
+### Attrition By Department & Gender
+    
+```{r}
+# attach the data set copy for use in plotting functions
+attach(data_copy)
+
+# lets's look at each department
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = businesstravel)) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Business Travel")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = educationfield)) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Education Field")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(jobinvolvement))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Job Involvement")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(jobsatisfaction))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Job Satisfaction")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = maritalstatus)) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Marital Status")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = overtime)) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Overtime")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(numcompaniesworked))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "# Companies Worked")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(trainingtimeslastyear))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Training Times Last Yr")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(yearsincurrentrole))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Yrs in Current Role")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(yearssincelastpromotion))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Yrs Since Last Promotion")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(environmentsatisfaction))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Environment Satisfaction")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(distancefromhome))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Distance From Home")
+
+data_copy[data_copy$attrition == 1, ] %>%
+    ggplot() +
+    geom_bar(aes(gender, fill = factor(age))) +
+    facet_wrap(~ department) +
+    ggtitle("Attrition = Yes") +
+    labs(fill = "Age")
+```
+
+Findings & recommendations  {data-navmenu="Insights"}
+=======================================================================
+
+Column 
+-----------------------------------------------------------------------
+
+### Major Findings
+
+* The highest number of employees that attrited were in the Research and Development department followed by the Sales department.
+
+* In decending order, $numcompaniesworked$ and $yearssincelastpromotion$ each, individually, have the greatest **increase** effect on odds of attrition
+
+* In decending order, $jobinvolvement$, $environmentsatisfaction$, $jobsatisfaction$, $trainingtimeslastyear$, and $yearsincurrentrole$ each, individually, have the greatest **decrease** effect on odds of attrition
+
+* Individually, the effect of $age$ **decreases** odds of attrition every year from ages 18-42. At age 43 the effect of $age$ is **_minimized_**. Afterwards, beginning at age 44, the effect of $age$ **increases** odds of attrition.
+
+* The odds of attrition will be substantially **lower** for married or divorced employees than it is for single employees.
+
+* The odds of attrition will be **lower** for each educationfield category compared to those with an education field of human resources.
+
+* The odds of attrition will be **greater** for both frequent or rare business travelers compared to non-travlers.
+
+Column 
+-----------------------------------------------------------------------
+
+### Recommendations
+
+* Focus on R&D department first, Sales department second  
+
+* Based on data exploration and model findings, consider initially focusing efforts on employees with:  
+
+    + single
+    + 18-30 years old
+    + < 3 companies previously worked for  
+    + 0-3 training times last year
+    + < 4 years in current role
+    + < 3 years since last promotion
+    + those who work overtime
+    + rare business travelers
+    + life sciences, marketing, and/or medical education fields
+    
+### Potential strategy
+
+(1) Look at employee placement first.
+    + Should some employees move to a different department?  
+    + Would they be happier? More engaged?  
+    + Are they currently in the department/role that is an optimal fit?  
+    
+(2) Provide adequate and appropriate training  
+    + Employees may not feel that they are getting enough of the right training  
+    
+(3) Reduce and/or re-align travel according to job role & department  
+    + Some employees may need to travel more to fully accomplish various tasks  
+    + Other employees may feel that they travel too much  
+
+(4) Address overtime
+    + Can overtime be reduced?
+    + Are temporary or seasonal hires needed?
+    + Can overly aggressive deadlines be extended? What race is trying to be won?
+    + Eliminate redundant or unnecessary job process requirements
+
+* Aggregated satisfaction ratings (counts) may indicate some success with implemented changes. 
+
+* Review status quarterly or semi-annually. 
+
+Other considerations  {data-navmenu="Insights"}
+=======================================================================
+
+Column 
+-----------------------------------------------------------------------
+
+### Other helpful data
+
+* Include attrition categories - i.e., instead of grouping by $attrition = yes\, or \, no$, consider expanding the number of categories/reasons for attrition, such as: quit, fire, resign, retire, death, medical, relocate, etc. 
+
+* Clarify meanings of $dailyrate$, $hourlyrate$, $monthlyrate$ and/or how they related to $monthlyincome$
+
+* Should we assume that $dailyrate$, $hourlyrate$, $monthlyrate$ represent an employee's salary? If so, shouldn't they be consitent? (ie, assume 8 hr workday - 8 * $hourlyrate$ should equal $dailyrate$, etc.)
+
+* Does $monthlyincome$ represent employee salary before or after deducting taxes & contributions (i.e., income, Social Security, medical/vision/dental insurance, etc.)
+
+* Amount of overtime (i.e., number of hours of overtime worked, which day of the week overtime was worked, was overtime worked during/on a holiday and which one, etc.) may provide more information/insight better than 'yes' or 'no' responses.
+
+* The type and amount of training received last year may be more informative and provide better insight (i.e., online, seminar, webinar, brown-bag, formal class, class at outside formal institution [also, online, blended, traditional], etc.)
+
+* Exclusive of what the model indicates, compare data to relevant HR/employment requirements - is the data representative of meeting or not meeting certain state or federal employment guidelines/requirements? Diversity comes to mind. If certain requirements are not being met, then the fulfillment of those requirements could cause change in the model and what insights it leads to.
+
+
+Column 
+-----------------------------------------------------------------------
+
+### Other things to try and/or explore
+
+* Look at a comparison of the misclassified instances from the test set vs. the instances with high leverage in the training set.  Are there similarities or differences? Anything that might indicate what's causing the misclassification?
+
+* GAM model - to try a smoothing, non-linear model
+
+* Incorporate/use SQL (via $sqldf$ package) to compare outlier instances vs. highleverage instances found in the training set. How are they similar? How are the different?
+
+* Incorporate/use SQL to compare misclassified instances from the test set vs. the outlier and/or high leverage instances in the training set. How are they similar? How are the different? This could be informative about why those instances in the test set were misclassified.
+
+* Discretize, or group, select predictor variables, such as $age$, $distancefromhome$, $dailyrate$, $hourlyrate$, and/or $monthlyincome$.
+
+* Bootstrap or randomly sample instances from the data set to add additional instances/observations to the data set to balance the response variable 
+    + is this an acceptable practice?
+    + how would the model change or be different (at least for logistic regression)?
+    
+* Other possible models
+    + AdaBoost
+    + Neural net(s) - simple, CNN, RNN, etc.
+    + Survival analysis
+    
+```{r}
+# clean memory
+rm(list = ls())
+```
+
+Final thoughts  {data-navmenu="Insights"}
+=======================================================================
+
+* In my opinion, using a flexdashboard structure in Rmarkdown is a good way to establish a sound workflow for conducting data analysis.
+
+* Flexdashboard templates can be built and saved that are unique to different types of analyses a business/data analyst might perform. Meaning, one can incorporate the relevant sections that may require modeling diagnostics or other things that are unique to that specific modeling method.
+
+* For large datasets (~ > 3-5GB) this might not be an optimal option for one's workflow, but for those data sets that are smaller I found this to be a good way for working with data and the corresponding analysis.
+
+* Yes, one can think of this as being similar to using jupyter notebooks. However, I have much more control over the design of this product. I chose not to use jupyter notebooks because it has a very linear and sequential feel to it. Instead, I like the ability to switch between tabs/menus to review previous work, etc. Doing so felt more like being able to look back and forth between different sections in a (real) book vs. scrolling up and down on a webpage. Your preference(s) may differ.
+
+* Using section and code-chunk headers in Rmarkdown are very helpful for navigating raw code. This should be a routine practice anyway.
+
+* Depending on personal/organizational needs, code generating one's dashboard workflow could assist in building relevant Shiny apps.
+
+* R/Rstudio has very good versatility. If needed, there are packages that allow one to run SQL, python, and other analytics related coding languages.
+
+* Using a workflow tool like this gives an easy method to discuss one's analysis (on-going or finished) with other colleagues. (NOTE: the source code can be embedded with the dashboard.)
+
+* Depending on how the dashboard tool is setup, one can give a presentation directly off of it. Or, it can serve as a supporting product during a presentation during the Q&A portion of a presentation. 
