@@ -3,6 +3,12 @@
 
 <hr>
 
+## UPDATE(S):
+
+9/29/2020 - Researching a solution to enable a user to view `attritition_analysis.html` file directly in their browser. Until a solution is found & implemented see `sample_screenshots.md` for images of the source code output.
+
+<hr>
+
 ## Project Description  
 
 This project seeks to identify features/variables that contribute to employee attrition using the IBM HR Analytics Employee Attrition & Performance data set from Kaggle.com. See **About this repository --> Files Not Included** section below.
