@@ -1,12 +1,16 @@
 ---
 title: "Kaggle Data - IBM HR Analytics"
 author: "G. Conway"
+knit: (function(inputFile, encoding) {
+      out_dir <- 'docs';
+      rmarkdown::render(inputFile,
+                        encoding=encoding,
+                        output_file=file.path(dirname(inputFile), out_dir, 'index.html')) })
 output: 
   flexdashboard::flex_dashboard:
     orientation: column
     vertical_layout: fill
     theme: yeti
-    source_code: embed
 ---
 
 ```{r initial_packages, include = FALSE}
@@ -24,7 +28,7 @@ data <- read_csv("WA_Fn-UseC_-HR-Employee-Attrition.csv")
 Welcome 
 =======================================================================
 
-Column {data-width=600}
+Column {data-width=500}
 -----------------------------------------------------------------------
 
 ### Why this project 
@@ -38,25 +42,30 @@ Column {data-width=600}
 * Work with a relevant data set 
 
 * Learning new things about flexdashboards in R/Rmarkdown (Ex: using html for picture sizing & placement)  
-**Image Source:**  https://images.techhive.com/images/article/2016/09/data_science_classes-100682563-large.jpg
-
-<div>
-  <img style="position:absolute;width:575px;height:400px;"
-      src="data_science_pic.jpg">
-</div>
-
-
-
-Column {data-width=400}
------------------------------------------------------------------------
 
 ### Important Note(s)
 
-* This is best viewed on a wide-screen monitor.  
+* **Source code** for this project can be found on my GitHub repo at [HR_Analytics](https://github.com/gconway012/HR_Analytics). 
+
+* This is best viewed on a wide-screen monitor. A 24" or larger monitor is recommended.  
 
 * After opening this file, expand or maximize the window to properly view it. 
 
 * A small, or reduced, window size causes the top tabs to move to a second line in the header row. This collapses the page contents in a manner that hides various window/section headers, etc.
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Sample image 
+
+**Image Source:**  https://images.techhive.com/images/article/2016/09/data_science_classes-100682563-large.jpg
+
+<div>
+  <img style="position:absolute;width:475px;height:300px;"
+      src="data_science_pic.jpg">
+</div>
+
 
 ### Experimental section
 
