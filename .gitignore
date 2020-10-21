@@ -1,0 +1,3 @@
+# csv
+## ignoring data file - link to data source provided in README.md
+*.csv
