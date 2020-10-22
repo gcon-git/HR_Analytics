@@ -3,12 +3,6 @@
 
 <hr>
 
-## UPDATE(S):
-
-9/29/2020 - Researching a solution to enable a user to view `attritition_analysis.html` file directly in their browser. Until a solution is found & implemented see `sample_screenshots.md` for images of the source code output.
-
-<hr>
-
 ## Project Description  
 
 This project seeks to identify features/variables that contribute to employee attrition using the IBM HR Analytics Employee Attrition & Performance data set from Kaggle.com. See **About this repository --> Files Not Included** section below.
@@ -18,14 +12,30 @@ This project seeks to identify features/variables that contribute to employee at
 * Experiment using flexdashboard(s) as a workflow framework for future projects.  
 * Refresh on regression modeling methods.
 * Refresh on R/RStudio. 
+* Use GitHub Pages to host .html file(s) and show project output
+
+## Project Output Links
+
+* [Dashboard/workflow](https://gconway012.github.io/HR_Analytics/)  
+* [Sample screenshots](https://github.com/gconway012/HR_Analytics/blob/master/sample_screenshots.md) 
 
 <hr>
 
+## Helpful References
+
+1. *Using flexdashboard*, https://rmarkdown.rstudio.com/flexdashboard/using.html.
+
+2. *Create Awesome HTML Table with knitr::kable and kableExtra*, by Hao Zhu, https://haozhu233.github.io/kableExtra/awesome_table_in_html.html#getting_started.
+
+3. *Deploying flexdashboard on GitHub Pages*, by Rami Krispin, dated Sep 4, 2020 at https://ramikrispin.github.io/2020/09/deploying-flexdashboard-on-github-pages/. Provided concise steps to follow to enable repository to host an .html file on GitHub Pages.
+
+4. *RMarkdown directing output file into a directory*, NicE's answer, dated Mar 9, 2015 at https://stackoverflow.com/questions/28894515/rmarkdown-directing-output-file-into-a-directory. Provided necessary code used to knit document/file to a different directory.
+
 ## Software utilized
 
-* Mac OSx Mojave version 10.14.6
-* R (for Mac) version 3.6.0 (2019-04-26) "Planting of a Tree"
-* RStudio version 1.2.1335
+* Mac OSx Catalina version 10.15.7
+* R (for Mac) version 4.0.2 (2020-06-22) "Taking Off Again"
+* RStudio version 1.3.1073
 
 ## Software installation
 
@@ -34,17 +44,17 @@ This project seeks to identify features/variables that contribute to employee at
 
 ## R packages utilized
 
-* tidyverse version 1.2.1
-* DataExplorer version 0.8.0
-* knitr version 1.25
-* kableExtra version 1.1.0
+* tidyverse version 1.3.0
+* DataExplorer version 0.8.1
+* knitr version 1.29
+* kableExtra version 1.2.1
 * pander version 0.6.3
 * gmodels version 2.18.1
-* car version 3.0-4
-* MASS version 7.3-51.4
-* glmnet version 2.0-18
+* car version 3.0-9
+* MASS version 7.3-53
+* glmnet version 4.0-2
 * randomForest version 4.6-14
-* plotly version 4.9.0
+* plotly version 4.9.2.1
 * AUC version 0.3.0
 
 ## R package installation
@@ -65,23 +75,13 @@ This project seeks to identify features/variables that contribute to employee at
 
 <hr>
 
-## About this repository
-
-### Included files
-
-* **attrition_analysis.Rmd**  
-    - This file contains the project source code.  
-* **attrition_analysis.html**  
-    - This file is the knitted output created by the project source code.
-    - The source code embedded in the file and can be viewed by clicking the `<\> Source Code` link in the dashboard menu.  
-
-### Files not included  
+## Files not included  
 
 * Data file 
     - The data for this project can be downloaded from:  https://www.kaggle.com/pavansubhasht/ibm-hr-analytics-attrition-dataset.  
 
 * Image file
-    - The image used in this project was downloaded from:  https://images.techhive.com/images/article/2016/09/data_science_classes-100682563-large.jpg.  
+    - The image used in the dashboard was downloaded from:  https://images.techhive.com/images/article/2016/09/data_science_classes-100682563-large.jpg.  
 
 <hr>
 
